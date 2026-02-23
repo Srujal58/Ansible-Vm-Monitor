@@ -1,0 +1,5 @@
+smtp_server: "smtp.gmail.com"
+smtp_port: 587
+email_user: "shahsrujal80@gmail.com"
+email_pass: "dmup hirt jxhf eoxk"
+alert_recipient: "srujalshah,ca@gmail.com"
