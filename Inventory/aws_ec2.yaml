@@ -1,12 +1,13 @@
-plugin: amazone.aws.aws_ec2
+plugin: amazon.aws.aws_ec2
 region: ca-central-1
 filters:
-  - "tag:Environment": "dev"
-  - instance-state-name: running
+  tag:Environment: dev
+  instance-state-name: running
 compose:
   ansible_host: public_ip_address
 keyed_groups:
-  - key: tags.Name"
-    prefix: "name"
-  - key: tags.Environment"
-    prefix: "env" 
+  - key: tags.Name
+    prefix: name
+  - key: tags.Environment
+    prefix: env
+    seperator: "" 
