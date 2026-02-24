@@ -2,19 +2,17 @@
   hosts: localhost
   gather_facts: true
   vars:
-    collected_metrics: >-
-      {{
-        hostvars |
-        dict2items |
-        selectattr('value.vm_metrics', 'defined') |
-        map(attribute='value.vm_metrics') |
-        list
-      }}
-    timestamp: "{{ ansible_date_time.date }} {{ ansible_date_time.time }}"
-    subject_line: "📊 VM Report – {{ ansible_date_time.date }} {{ ansible_date_time.hour }}:{{ ansible_date_time.minute }}"
+    collected_metrics: "{{ all_vm_metrics | default([]) }}"
+    timestamp: "{{ ansible_facts['date_time'].date }} {{ ansible_facts['date_time'].time }}"
+    subject_line: "📊 VM Report – {{ ansible_facts['date_time'].date }} {{ ansible_facts['date_time'].hour }}:{{ ansible_facts['date_time'].minute }}"
   tasks:
-    - name: Send animated HTML report via email
-      mail:
+    - name: Abort if no metrics were collected
+      fail:
+        msg: "No VM metrics collected. Skipping email report."
+      when: collected_metrics | length == 0
+
+    - name: Send HTML VM report via Gmail
+      community.general.mail:
         host: "{{ smtp_server }}"
         port: "{{ smtp_port }}"
         username: "{{ email_user }}"
@@ -23,3 +21,4 @@
         subject: "{{ subject_line }}"
         body: "{{ lookup('template', 'templates/report_email_animated.html.j2') }}"
         subtype: html
+        secure: starttls
