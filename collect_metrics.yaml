@@ -1,10 +1,10 @@
 - name: Collect VM metrics
-  hosts: env_dev
+  hosts: env_dev    # use the exact group from your inventory
   become: true
   gather_facts: true
   tasks:
 
-    - name: Install sysstat (for mpstat)
+    - name: Install sysstat (Debian)
       apt:
         name: sysstat
         state: present
@@ -19,19 +19,30 @@
     - name: Get CPU usage via mpstat
       shell: "mpstat 1 1 | awk '/Average/ && $NF ~ /[0-9.]+/ {print 100 - $NF}'"
       register: cpu_usage
+      failed_when: cpu_usage.rc != 0 and cpu_usage.stdout == ""
 
     - name: Get memory usage
       shell: "free | awk '/Mem/{printf(\"%.2f\", $3/$2 * 100.0)}'"
       register: mem_usage
+      failed_when: mem_usage.rc != 0 and mem_usage.stdout == ""
 
     - name: Get disk usage
       shell: "df / | awk 'NR==2 {print $5}' | tr -d '%'"
       register: disk_usage
+      failed_when: disk_usage.rc != 0 and disk_usage.stdout == ""
 
-    - name: Set metrics fact
+    - name: Set per-host metrics fact
       set_fact:
         vm_metrics:
           hostname: "{{ inventory_hostname }}"
-          cpu: "{{ cpu_usage.stdout | float | round(2) }}"
-          mem: "{{ mem_usage.stdout | float | round(2) }}"
-          disk: "{{ disk_usage.stdout | float | round(2) }}"
+          cpu: "{{ (cpu_usage.stdout | default('0')) | float | round(2) }}"
+          mem: "{{ (mem_usage.stdout | default('0')) | float | round(2) }}"
+          disk: "{{ (disk_usage.stdout | default('0')) | float | round(2) }}"
+
+- name: Aggregate all metrics on localhost
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Combine metrics from all hosts
+      set_fact:
+        all_vm_metrics: "{{ groups['env_dev'] | map('extract', hostvars, 'vm_metrics') | list }}"
